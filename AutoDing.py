@@ -30,7 +30,7 @@ logger.addHandler(console)
 
 
 config = configparser.ConfigParser(allow_no_value=False)
-config.read("dingding.cfg")
+config.read("dingding.cfg",encoding='utf-8')
 scheduler = sched.scheduler(time.time,time.sleep)
 go_hour = int(config.get("time","go_hour"))
 back_hour = int(config.get("time","back_hour"))
@@ -58,12 +58,12 @@ def with_open_close_dingding(func):
             process = subprocess.Popen(operation, shell=False,stdout=subprocess.PIPE)
             process.wait()
             time.sleep(2)
-        logger.info("输入解锁密码")
-        operation_list0 = [self.adbinput_p1, self.adbinput_p2, self.adbinput_p3, self.adbinput_p4, self.adbinput_p5, self.adbinput_p6]
-        for operation in operation_list0:
-            process = subprocess.Popen(operation, shell=False,stdout=subprocess.PIPE)
-            process.wait()
-            time.sleep(2)
+        # logger.info("输入解锁密码")
+        # operation_list0 = [self.adbinput_p1, self.adbinput_p2, self.adbinput_p3, self.adbinput_p4, self.adbinput_p5, self.adbinput_p6]
+        # for operation in operation_list0:
+        #     process = subprocess.Popen(operation, shell=False,stdout=subprocess.PIPE)
+        #     process.wait()
+        #     time.sleep(2)
         # 确保完全启动，并且加载上相应按键
         time.sleep(3)
         logger.info("打开钉钉")
@@ -228,11 +228,12 @@ class dingding:
     # 打开打卡界面
     def openplaycard_interface(self):
         logger.info("打开打卡界面")
-        operation_list = [self.adbselect_work, self.adbscrbottom, self.adbselect_playcard]
+        # operation_list = [self.adbselect_work, self.adbscrbottom, self.adbselect_playcard]
+        operation_list = [self.adbselect_work, self.adbselect_playcard]
         for operation in operation_list:
             process = subprocess.Popen(operation, shell=False,stdout=subprocess.PIPE)
             process.wait()
-            time.sleep(2)
+            time.sleep(5)
         time.sleep(5)
 
     # 下班

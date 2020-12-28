@@ -37,7 +37,7 @@ def get_ocr_str_from_bytes(file_bytes, origin_format=True):
 
 
 if __name__ == '__main__':
-    IMAGE_PATH = "../imgs/screen-20181225092525.png"
+    IMAGE_PATH = "./tmp/v2-2657fddd956e8764dd584dd82c1f6926_720w.jpg"
     str = get_ocr_str(IMAGE_PATH)
     str = str.replace("\n", "")
     print(str)
