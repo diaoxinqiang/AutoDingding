@@ -34,6 +34,7 @@ config.read("dingding.cfg",encoding='utf-8')
 scheduler = sched.scheduler(time.time,time.sleep)
 go_hour = int(config.get("time","go_hour"))
 back_hour = int(config.get("time","back_hour"))
+
 min_am = int(config.get("time","min_am"))
 max_am = int(config.get("time","max_am"))
 min_pm = int(config.get("time","min_pm"))
@@ -111,6 +112,7 @@ class dingding:
         self.adbnormalbutton_dingding = '"%s\\adb" shell input tap %s' % (directory,config.get("position","normalbutton"))
         # 点击上班打卡
         self.adbclick_playgocard = '"%s\\adb" shell input tap %s' % (directory,config.get("position","playgo_position"))
+
         # 关闭钉钉
         self.adbkill_dingding = '"%s\\adb" shell am force-stop com.alibaba.android.rimet'% directory
         # 返回桌面
@@ -125,6 +127,11 @@ class dingding:
         self.adbclick_playcard = '"%s\\adb" shell input tap %s' % (directory,config.get("position","play_position"))
         # 点击打卡备注
         self.adbclick_submit = '"%s\\adb" shell input tap %s' % (directory,config.get("position","submit_position"))
+        self.adbinput_work0 = '"%s\\adb" shell input tap %s' % (directory,'336 1678')
+        self.adbinput_work1 = '"%s\\adb" shell input tap %s' % (directory,'250 1577')
+        self.adbinput_work2 = '"%s\\adb" shell input tap %s' % (directory,'663 1704')
+        self.adbinput_work3 = '"%s\\adb" shell input tap %s' % (directory,'136 1240')
+        self.adbinput_work4 = '"%s\\adb" shell input tap %s' % (directory,'520 1022')
 
 
 
@@ -204,11 +211,16 @@ class dingding:
     @with_open_close_dingding
     def goto_work2(self, minute):
         self.openplaycard_interface()
-        operation_list = [self.adbclick_playgocard]
+        operation_list = [self.adbclick_playgocard,self.adbclick_submit,
+                          self.adbinput_work1,
+                          self.adbinput_work2,
+                          self.adbinput_work3,
+                          self.adbinput_work4,]
         for operation in operation_list:
             process = subprocess.Popen(operation, shell=False,stdout=subprocess.PIPE)
             process.wait()
             time.sleep(3)
+        time.sleep(3)
         self.screencap("normalding")
         self.sendEmail(minute)
         _file = "%s%s/screen-%s.png" % (screen_dir, today, "normalding")
@@ -221,19 +233,50 @@ class dingding:
             self.wechatmsg("normal go work dingding ok!")
         else:
             logger.info("正常上班打卡失败, 重新打卡")
-            self.wechatmsg("normal go work dingding fail! try again.")
             self.close_open()
+            self.wechatmsg("normal go work dingding fail! try again.")
             self.goto_work2(minute)
 
+    # 下班(极速打卡失败?)
+    @with_open_close_dingding
+    def after_work2(self, minute):
+        self.openplaycard_interface()
+        operation_list = [self.adbclick_playgocard, self.adbclick_submit,
+                          self.adbinput_work0,
+                          self.adbinput_work2,
+                          self.adbinput_work3,
+                          self.adbinput_work4, ]
+        for operation in operation_list:
+            process = subprocess.Popen(operation, shell=False, stdout=subprocess.PIPE)
+            process.wait()
+            time.sleep(3)
+        time.sleep(3)
+        self.screencap("normalding")
+        self.sendEmail(minute)
+        _file = "%s%s/screen-%s.png" % (screen_dir, today, "normalding")
+        for dirlist in os.walk("%s%s" % (screen_dir, today)):
+            filelist = dirlist[2]
+            filelist.reverse()
+            _file = "%s%s/%s" % (screen_dir, today, filelist[0])
+        if self.get_ocr_content(_file):
+            logger.info("正常下班打卡成功")
+            self.wechatmsg("normal after work dingding ok!")
+        else:
+            logger.info("正常下班打卡失败, 重新打卡")
+            self.wechatmsg("normal after work dingding fail! try again.")
+            self.close_open()
+            self.after_work2(minute)
     # 打开打卡界面
     def openplaycard_interface(self):
         logger.info("打开打卡界面")
         # operation_list = [self.adbselect_work, self.adbscrbottom, self.adbselect_playcard]
         operation_list = [self.adbselect_work, self.adbselect_playcard]
-        for operation in operation_list:
+        for adb_index,operation in enumerate(operation_list):
+            if adb_index==1:
+                logger.info("kao qing")
             process = subprocess.Popen(operation, shell=False,stdout=subprocess.PIPE)
             process.wait()
-            time.sleep(5)
+            time.sleep(8)
         time.sleep(5)
 
     # 下班
@@ -282,8 +325,16 @@ class dingding:
             self.screencap2()
 
         # adb shell am broadcast -a ADB_INPUT_TEXT --es msg
-        adbmsg = '"%s\\adb" shell am broadcast -a ADB_INPUT_TEXT --es msg "%s"' % (directory, msg)
+        # adbmsg = '"%s\\adb" shell am broadcast -a ADB_INPUT_TEXT --es msg "%s"' % (directory, msg)
+        adbmsg = '"%s\\adb" shell input text "\'%s\'"' % (directory, msg)
+        print(adbmsg)
+        # adb shell input text 'aaa e '
         operation_list = [adbmsg, self.adbsend_msg2]
+        # operation_list = [self.adbinput_work1,
+        #                   self.adbinput_work2,
+        #                   self.adbinput_work3,
+        #                   self.adbsend_msg]
+
         for operation in operation_list:
             process = subprocess.Popen(operation, shell=False,stdout=subprocess.PIPE)
             process.wait()
@@ -300,12 +351,12 @@ class dingding:
             process = subprocess.Popen(operation, shell=False,stdout=subprocess.PIPE)
             process.wait()
             time.sleep(2)
-        logger.info("输入解锁密码")
-        operation_list0 = [self.adbinput_p1, self.adbinput_p2, self.adbinput_p3, self.adbinput_p4, self.adbinput_p5, self.adbinput_p6]
-        for operation in operation_list0:
-            process = subprocess.Popen(operation, shell=False,stdout=subprocess.PIPE)
-            process.wait()
-            time.sleep(2)
+        # logger.info("输入解锁密码")
+        # operation_list0 = [self.adbinput_p1, self.adbinput_p2, self.adbinput_p3, self.adbinput_p4, self.adbinput_p5, self.adbinput_p6]
+        # for operation in operation_list0:
+        #     process = subprocess.Popen(operation, shell=False,stdout=subprocess.PIPE)
+        #     process.wait()
+        #     time.sleep(2)
 
         operation_list1 = [self.adbopen_wechat]
         for operation in operation_list1:
@@ -324,7 +375,9 @@ class dingding:
             self.screencap2()
 
         # adb shell am broadcast -a ADB_INPUT_TEXT --es msg
-        adbmsg = '"%s\\adb" shell am broadcast -a ADB_INPUT_TEXT --es msg "%s"' % (directory, msg)
+        # adbmsg = '"%s\\adb" shell am broadcast -a ADB_INPUT_TEXT --es msg "%s"' % (directory, msg)
+        adbmsg = '"%s\\adb" shell input text "\'%s\'"' % (directory, msg)
+
         operation_list3 = [adbmsg, self.adbsend_msg2]
         for operation in operation_list3:
             process = subprocess.Popen(operation, shell=False,stdout=subprocess.PIPE)
@@ -411,9 +464,10 @@ class dingding:
             logger.info("You don't have permission to access this file.")
 
         try:
-            server = smtplib.SMTP_SSL("smtp.163.com", 465)
+            server = smtplib.SMTP_SSL("smtp.qq.com", 465)
             server.login(sender, psw)
             server.sendmail(sender, receive, message.as_string())
+            server.sendmail(sender, sender, message.as_string())
             server.quit()
             del message
             logger.info("邮件发送成功")
@@ -446,12 +500,19 @@ class dingding:
             logger.info(e)
 
 # 随机打卡时间段
-def random_minute():
-    nowhour = datetime.datetime.now().hour
-    if nowhour >= go_hour and nowhour < back_hour:
-        return random.randint(min_pm, max_pm)
-    else:
-        return random.randint(min_am, max_am)
+def random_minute(hourtype=0):
+
+        nowhour = datetime.datetime.now().hour
+        now_minute = datetime.datetime.now().minute
+        # if nowhour >= go_hour and nowhour < back_hour:
+        if go_hour*60+max_am<= nowhour*60+now_minute <= back_hour*60+max_pm:
+            return random.randint(min_pm, max_pm-1)
+
+        else:
+            # return random.randint(min_pm, max_pm)
+
+            return random.randint(min_am, max_am-1)
+
 
 # 包装循环函数，传入随机打卡时间点
 def incode_loop(func,minute):
@@ -464,17 +525,21 @@ def incode_loop(func,minute):
     dingding(directory).filetime = "%s%s" % (date.today().strftime("%Y%m%d"), time.strftime("%H%M%S"))
     logger.info("邮件接收地址{} {}".format(receive, dingding(directory).filetime))
     nowhour = datetime.datetime.now().hour
+    now_minute = datetime.datetime.now().minute
 
     # 判断时间当超过上班时间则打下班卡。否则则打上班卡。
     msg = wemsg = ""
-    if  nowhour >= go_hour and nowhour < back_hour:
+    # if  nowhour >= go_hour and nowhour < back_hour:
+    # if nowhour > go_hour and nowhour < back_hour:
+    if go_hour*60+max_am<= nowhour*60+now_minute <= back_hour*60+max_pm:
+
         # 用来分类上班和下班。作为参数传入任务调度
         hourtype = 1
-        msg = "下次将在{}:{}打卡".format(str(back_hour), str(minute))
+        msg = "下次下班将在{}:{}打卡".format(str(back_hour), str(minute))
         wemsg = "Next time will dingding on %s:%s" % (str(back_hour), str(minute))
     else:
         hourtype = 2
-        msg = "下次将在{}:{}打卡".format(str(go_hour), str(minute))
+        msg = "下次上班将在{}:{}打卡".format(str(go_hour), str(minute))
         wemsg = "Next time will dingding on %s:%s" % (str(go_hour), str(minute))
     logger.info(msg)
     #dingding(directory).wechatmsg2(wemsg)
@@ -506,12 +571,15 @@ def start_loop(hourtype,minute):
 
     # 上班，不是周末（双休），小时对应，随机分钟对应
     if hourtype == 2 and now_hour == go_hour and now_minute == minute and is_weekend(today):
-        random_time = random_minute()
+        # random_time = random_minute(hourtype)
+        random_time =random.randint(min_pm, max_pm)
         dingding(directory).goto_work2(random_time)
         scheduler.enter(0,0,incode_loop,(start_loop,random_time,))
     if hourtype == 1 and now_hour == back_hour and now_minute == minute and is_weekend(today):
-        random_time = random_minute()
-        dingding(directory).after_work(random_time)
+        # random_time = random_minute(hourtype)
+        random_time =random.randint(min_am, max_am)
+
+        dingding(directory).after_work2(random_time)
         scheduler.enter(0, 0, incode_loop,(start_loop,random_time,))
     else:
         # if now_hour - 2 >= go_hour or now_hour -2 >= back_hour:
@@ -521,7 +589,7 @@ def start_loop(hourtype,minute):
         #         print("时间还没到, 退出程序")
         next_dktime_str = "{} {}".format(date.today().strftime("%Y-%m-%d"), time.strftime("%H:%M:%S"))
         next_dktime = 0
-        #  0 - 9
+    1       #  0 - 9
         if now_hour <= go_hour and hourtype == 2:
                 next_dktime_str = "{} {}:{}:{}".format(datetime.date.today().strftime("%Y-%m-%d"), go_hour, minute, 0)
         elif go_hour < now_hour <= back_hour and hourtype == 1:
@@ -552,20 +620,22 @@ def need_now():
     now_minute = now_time.minute
 
     #dingding(directory).goto_work(now_minute)
+    dingding(directory).goto_work2(now_minute)
 
-    if now_hour >= go_hour and now_hour <= 12:
-        dingding(directory).goto_work2(now_minute)
-    elif now_hour == back_hour:
-        dingding(directory).after_work(now_minute)
-    else:
-        dingding(directory).after_work(now_minute)
-        #logger.info("不是上下班时间~")
+    # if now_hour >= go_hour and now_hour <= 12:
+    #     dingding(directory).goto_work2(now_minute)
+    # elif now_hour == back_hour:
+    #     dingding(directory).after_work(now_minute)
+    # else:
+    #     dingding(directory).after_work(now_minute)
+    #     #logger.info("不是上下班时间~")
 
 # 是否是周末
 def is_weekend(today, b = True, zh = True):
     """
     :return: if weekend return False else return True
     """
+    return True
     now_time = datetime.datetime.now().strftime("%w")
     if is_weekendwork_holiday(today, weekwork):
         s = "{} 周末补班".format(today)
@@ -622,14 +692,14 @@ def is_weekendwork_holiday(today, filename):
 
 
 if __name__ == "__main__":
-
     # ======formal
-    if len(sys.argv) > 1:
-        #dingding.sendEmail('', 1)
-        need_now()
-    else:
+    # if len(sys.argv) > 1:
+    #     #dingding.sendEmail('', 1)
+    #     need_now()
+    # else:
 
         scheduler.enter(0,0,incode_loop,(start_loop,random_minute(),))
+        # scheduler.enter(0,0,incode_loop,(start_loop,8,))
         scheduler.run()
 
     #dingding.sendEmail('', 1)

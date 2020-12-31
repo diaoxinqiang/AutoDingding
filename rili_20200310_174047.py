@@ -5,12 +5,12 @@
 from pyquery import PyQuery as pq
 import datetime
 
-year = 2020 #datetime.datetime.now().year
+year = 2021 #datetime.datetime.now().year
 
 #周末补班
-#fo = open("isweekwork.cfg", "w")
+fo = open("isweekwork.cfg", "w")
 #节假日
-fo = open("isholiday.cfg", "w")
+# fo = open("isholiday.cfg", "w")
 
 for m in "01,02,03,04,05,06,07,08,09,10,11,12".split(','):
 
@@ -19,9 +19,9 @@ for m in "01,02,03,04,05,06,07,08,09,10,11,12".split(','):
 	html = pq(url=rl_url)
 
 	#周末补班
-	#xiu = html('a.wnrl_riqi_ban')
+	xiu = html('a.wnrl_riqi_ban')
 	#节假日
-	xiu = html('a.wnrl_riqi_xiu')
+	# xiu = html('a.wnrl_riqi_xiu')
 
 	#print(xiu)
 

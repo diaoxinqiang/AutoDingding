@@ -1,9 +1,9 @@
 from aip import AipOcr
 
 # 认证信息
-APP_ID = ''
-API_KEY = 'b52a2d05d6c644518b15d747e795b78c'
-SECRET_KEY = 'ceb97436c7e046468dd578db104c6025'
+APP_ID = '23420526'
+API_KEY = 'OBNFyivUp8XtIMFu6Sbd3CWS'
+SECRET_KEY = '6tyIH4cX1Ib0KqLwQm8qgzFZ49UCP4FY'
 
 
 def get_ocr_str(file_path, origin_format=True):
