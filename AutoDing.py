@@ -49,7 +49,8 @@ psw = config.get("email","psw")
 receive = config.get("email","receive")
 screen_dir = config.get("screen","screen_dir")
 today = date.today().strftime("%Y-%m-%d")
-
+goto_work_hour_type = 2
+after_work_hour_type =1
 # 打开钉钉，关闭钉钉封装为一个妆饰器函数
 def with_open_close_dingding(func):
     def wrapper(self, *args, **kwargs):
@@ -139,6 +140,7 @@ class dingding:
         self.adbopen_wechat = '"%s\\adb" shell monkey -p com.tencent.mm -c android.intent.category.LAUNCHER 1' % directory
         # 点击选择聊天对象
         self.adbselect_chat = '"%s\\adb" shell input tap %s' % (directory,config.get("wechat","select_chat"))
+        self.adbselect_chat2 = '"%s\\adb" shell input tap %s' % (directory,config.get("wechat","select_chat"))
         # 点击选择焦点输入
         self.adbfocus_text = '"%s\\adb" shell input tap %s' % (directory,config.get("wechat","focus_text"))
         # 回车
@@ -491,9 +493,10 @@ class dingding:
         content = ""
 
         try:
-            server = smtplib.SMTP_SSL("smtp.163.com", 465)
+            server = smtplib.SMTP_SSL("smtp.qq.com", 465)
             server.login(sender, psw)
-            server.sendmail(sender, receive, message.as_string())
+            # server.sendmail(sender, receive, message.as_string())
+            server.sendmail(sender, sender, message.as_string())
             server.quit()
             logger.info("{}分钟前的邮件提醒".format(minute))
         except smtplib.SMTPException as e:
@@ -534,11 +537,11 @@ def incode_loop(func,minute):
     if go_hour*60+max_am<= nowhour*60+now_minute <= back_hour*60+max_pm:
 
         # 用来分类上班和下班。作为参数传入任务调度
-        hourtype = 1
+        hourtype = after_work_hour_type
         msg = "下次下班将在{}:{}打卡".format(str(back_hour), str(minute))
         wemsg = "Next time will dingding on %s:%s" % (str(back_hour), str(minute))
     else:
-        hourtype = 2
+        hourtype = goto_work_hour_type
         msg = "下次上班将在{}:{}打卡".format(str(go_hour), str(minute))
         wemsg = "Next time will dingding on %s:%s" % (str(go_hour), str(minute))
     logger.info(msg)
@@ -570,12 +573,12 @@ def start_loop(hourtype,minute):
     current_time = int(time.time())
 
     # 上班，不是周末（双休），小时对应，随机分钟对应
-    if hourtype == 2 and now_hour == go_hour and now_minute == minute and is_weekend(today):
+    if hourtype == goto_work_hour_type and now_hour == go_hour and now_minute == minute and is_weekend(today):
         # random_time = random_minute(hourtype)
         random_time =random.randint(min_pm, max_pm)
         dingding(directory).goto_work2(random_time)
         scheduler.enter(0,0,incode_loop,(start_loop,random_time,))
-    if hourtype == 1 and now_hour == back_hour and now_minute == minute and is_weekend(today):
+    if hourtype == after_work_hour_type and now_hour == back_hour and now_minute == minute and is_weekend(today):
         # random_time = random_minute(hourtype)
         random_time =random.randint(min_am, max_am)
 
@@ -589,10 +592,11 @@ def start_loop(hourtype,minute):
         #         print("时间还没到, 退出程序")
         next_dktime_str = "{} {}".format(date.today().strftime("%Y-%m-%d"), time.strftime("%H:%M:%S"))
         next_dktime = 0
-    1       #  0 - 9
-        if now_hour <= go_hour and hourtype == 2:
+           #  0 - 9
+        print('hourtype:',hourtype)
+        if now_hour <= go_hour and hourtype == goto_work_hour_type:
                 next_dktime_str = "{} {}:{}:{}".format(datetime.date.today().strftime("%Y-%m-%d"), go_hour, minute, 0)
-        elif go_hour < now_hour <= back_hour and hourtype == 1:
+        elif go_hour < now_hour <= back_hour and hourtype == after_work_hour_type:
                 next_dktime_str = "{} {}:{}:{}".format(datetime.date.today().strftime("%Y-%m-%d"), back_hour, minute, 0)
         else:
             # 早上, 明天 +1
@@ -607,7 +611,7 @@ def start_loop(hourtype,minute):
         #dingding(directory).wechatmsg2(tip_msg)
         if only_minute in [5, 10, 15, 30, 60, 500, 900, 1200, 1500]:
             dingding(directory).sendEmailTips(only_minute)
-            dingding(directory).wechatmsg2(tip_msg)
+            # dingding(directory).wechatmsg2(tip_msg)
         scheduler.enter(60,0,start_loop,(hourtype,minute,))
 
 # 即时执行
@@ -620,7 +624,8 @@ def need_now():
     now_minute = now_time.minute
 
     #dingding(directory).goto_work(now_minute)
-    dingding(directory).goto_work2(now_minute)
+    # dingding(directory).goto_work2(now_minute)
+    dingding(directory).after_work2(now_minute)
 
     # if now_hour >= go_hour and now_hour <= 12:
     #     dingding(directory).goto_work2(now_minute)
@@ -635,7 +640,7 @@ def is_weekend(today, b = True, zh = True):
     """
     :return: if weekend return False else return True
     """
-    return True
+    # return True
     now_time = datetime.datetime.now().strftime("%w")
     if is_weekendwork_holiday(today, weekwork):
         s = "{} 周末补班".format(today)
