@@ -460,10 +460,10 @@ class dingding:
                         img_html = '%s<img width="300px" src="cid:%s" alt="%s">' % (img_html, fname, fname)
                 content = MIMEText(html.format(img_html), 'html', 'utf-8')
                 message.attach(content)
-        except FileNotFoundError:
-            logger.info("File is not found.")
-        except PersmissionError:
-            logger.info("You don't have permission to access this file.")
+        except Exception:
+            logger.info("构建邮箱文件失败.")
+        # except PersmissionError:
+        #     logger.info("You don't have permission to access this file.")
 
         try:
             server = smtplib.SMTP_SSL("smtp.qq.com", 465)
@@ -473,8 +473,9 @@ class dingding:
             server.quit()
             del message
             logger.info("邮件发送成功")
-        except smtplib.SMTPException as e:
+        except Exception as e:
             logger.info(e)
+            logger.info('发送邮箱失败')
 
 # 发送邮件（QQ邮箱）
     def sendEmailTips(self,minute):
@@ -509,12 +510,12 @@ def random_minute(hourtype=0):
         now_minute = datetime.datetime.now().minute
         # if nowhour >= go_hour and nowhour < back_hour:
         if go_hour*60+max_am<= nowhour*60+now_minute <= back_hour*60+max_pm:
-            return random.randint(min_pm, max_pm-1)
+            return  max_pm
 
         else:
             # return random.randint(min_pm, max_pm)
 
-            return random.randint(min_am, max_am-1)
+            return max_am
 
 
 # 包装循环函数，传入随机打卡时间点
@@ -533,15 +534,15 @@ def incode_loop(func,minute):
     # 判断时间当超过上班时间则打下班卡。否则则打上班卡。
     msg = wemsg = ""
     # if  nowhour >= go_hour and nowhour < back_hour:
-    # if nowhour > go_hour and nowhour < back_hour:
+    # if nowhour >= go_hour and nowhour < back_hour:
     if go_hour*60+max_am<= nowhour*60+now_minute <= back_hour*60+max_pm:
 
         # 用来分类上班和下班。作为参数传入任务调度
-        hourtype = after_work_hour_type
+        hourtype = 1
         msg = "下次下班将在{}:{}打卡".format(str(back_hour), str(minute))
         wemsg = "Next time will dingding on %s:%s" % (str(back_hour), str(minute))
     else:
-        hourtype = goto_work_hour_type
+        hourtype = 2
         msg = "下次上班将在{}:{}打卡".format(str(go_hour), str(minute))
         wemsg = "Next time will dingding on %s:%s" % (str(go_hour), str(minute))
     logger.info(msg)
@@ -575,12 +576,12 @@ def start_loop(hourtype,minute):
     # 上班，不是周末（双休），小时对应，随机分钟对应
     if hourtype == goto_work_hour_type and now_hour == go_hour and now_minute == minute and is_weekend(today):
         # random_time = random_minute(hourtype)
-        random_time =random.randint(min_pm, max_pm)
+        random_time = max_pm
         dingding(directory).goto_work2(random_time)
         scheduler.enter(0,0,incode_loop,(start_loop,random_time,))
     if hourtype == after_work_hour_type and now_hour == back_hour and now_minute == minute and is_weekend(today):
         # random_time = random_minute(hourtype)
-        random_time =random.randint(min_am, max_am)
+        random_time =max_am
 
         dingding(directory).after_work2(random_time)
         scheduler.enter(0, 0, incode_loop,(start_loop,random_time,))
